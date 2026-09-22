@@ -1,3 +1,3 @@
 # Database Directory
 
-This directory contains database schemas, migration scripts, and seed files.
+This directory contains database migration scripts, schemas, and seed data for the application.

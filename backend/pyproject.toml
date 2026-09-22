@@ -5,21 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "backend"
 version = "1.0.0"
-description = "Flask Backend Application"
+description = "Flask backend application"
 readme = "README.md"
-authors = [
-    { name = "Developer", email = "developer@example.com" }
-]
 requires-python = ">=3.11"
 dependencies = [
     "Flask>=3.0.0",
     "Werkzeug>=3.0.0"
 ]
 
-[tool.ruff]
-line-length = 88
-target-version = "py311"
-
 [tool.black]
 line-length = 88
 target-version = ['py311']
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]

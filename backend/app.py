@@ -3,9 +3,9 @@ from flask import Flask, jsonify
 app = Flask(__name__)
 
 
-@app.route("/health", methods=["GET"])
+@app.route("/health")
 def health_check():
-    return jsonify({"status": "healthy", "service": "backend"}), 200
+    return jsonify({"status": "healthy", "service": "backend"})
 
 
 if __name__ == "__main__":
