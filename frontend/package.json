@@ -1,27 +1,32 @@
 {
   "name": "frontend",
-  "version": "0.1.0",
   "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@mui/material": "^6.4.3",
+    "@mui/material": "^6.4.1",
+    "@mui/icons-material": "^6.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.19.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
     "autoprefixer": "^10.4.20",
-    "eslint": "^9.19.0",
+    "eslint": "^9.18.0",
     "postcss": "^8.5.1",
-    "prettier": "^3.4.2",
-    "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.3"
-  },
-  "scripts": {
-    "lint": "eslint .",
-    "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\""
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
   }
 }

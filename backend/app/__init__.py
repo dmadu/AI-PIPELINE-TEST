@@ -1,20 +1,17 @@
 from flask import Flask
-from app.config import config_by_name
-from app.extensions import db, migrate
 
-def create_app(config_name=None):
-    if config_name is None:
-        config_name = 'default'
+def create_app(test_config=None):
+    app = Flask(__name__, instance_relative_config=True)
+    
+    if test_config is None:
+        app.config.from_mapping(
+            SECRET_KEY='dev',
+        )
+    else:
+        app.config.from_mapping(test_config)
         
-    app = Flask(__name__)
-    app.config.from_object(config_by_name[config_name])
-    
-    # Initialize extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
-    
     @app.route('/health')
     def health_check():
-        return {"status": "healthy"}, 200
+        return {"status": "healthy"}
         
     return app
