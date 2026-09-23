@@ -12,11 +12,25 @@ build/
 develop-eggs/
 dist/
 downloads/
-egg-info/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+siteroot/
+*.egg-info/
 .installed.cfg
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
 pip-delete-this-directory.txt
-tox/
+
+# Unit test / coverage reports
+htmlcov/
 .tox/
+.nox/
 .coverage
 .coverage.*
 .cache
@@ -27,27 +41,28 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# Flask / Virtual environments
-instance/
-.webassets-cache
-.venv/
+# Virtual Environments
+.env
+.venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
-
 # IDEs and Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+*.iml
 
-# OS metadata
+# Frontend dependencies & build outputs
+node_modules/
+dist/
+.next/
+.turbo/
+
+# OS specific
 .DS_Store
 Thumbs.db

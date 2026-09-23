@@ -1,17 +1,12 @@
 from flask import Flask
-from src.config import Config
-from src.extensions import db, migrate
+from flask_cors import CORS
 
-def create_app(config_class=Config):
+def create_app(config_name=None):
     app = Flask(__name__)
-    app.config.from_object(config_class)
-
-    # Initialize extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
+    CORS(app)
 
     @app.route('/health')
     def health_check():
-        return {'status': 'healthy', 'database': 'configured'}
+        return {"status": "healthy"}, 200
 
     return app

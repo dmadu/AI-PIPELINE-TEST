@@ -1,11 +1,9 @@
-# Backend (Flask, Python 3.11)
+# Backend Service
 
-This directory contains the Flask backend application.
+Built with Python 3.11 and Flask.
 
-## Setup
-
+## Running locally
 ```bash
-python -m venv venv
-source venv/bin/activate
 pip install -r requirements.txt
+python src/app.py
 ```

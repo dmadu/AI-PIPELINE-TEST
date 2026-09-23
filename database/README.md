@@ -1,3 +1,3 @@
-# Database
+# Database Directory
 
-This directory is designated for database migration scripts, schemas, and seed data.
+Contains database schemas, initialization scripts, and migration files.

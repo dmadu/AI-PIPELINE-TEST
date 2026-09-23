@@ -1,3 +1,3 @@
-# Docker
+# Docker Directory
 
-This directory is designated for containerization configurations and Dockerfiles.
+Contains Dockerfiles and docker-compose configurations for containerization.

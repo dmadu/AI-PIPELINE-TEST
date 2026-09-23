@@ -1,3 +1,3 @@
-# Tests
+# Tests Directory
 
-This directory is designated for integration, end-to-end, and cross-cutting tests.
+Contains cross-cutting integration and end-to-end (E2E) test suites.
