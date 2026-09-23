@@ -1,33 +1,45 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load
 
 load_dotenv()
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key')
+    """Base configuration."""
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # Connection pooling parameters for PostgreSQL 16
+    
+    # Connection pooling configuration for PostgreSQL 16
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': int(os.getenv('DB_POOL_SIZE', 10)),
-        'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', 20)),
-        'pool_recycle': int(os.getenv('DB_POOL_RECYCLE', 1800)),
-        'pool_pre_ping': True,
+        "pool_size": int(os.getenv("SQLALCHEMY_POOL_SIZE", 10)),
+        "max_overflow": int(os.getenv("SQLALCHEMY_MAX_OVERFLOW", 20)),
+        "pool_timeout": int(os.getenv("SQLALCHEMY_POOL_TIMEOUT", 30)),
+        "pool_recycle": int(os.getenv("SQLALCHEMY_POOL_RECYCLE", 1800)),
     }
 
 class DevelopmentConfig(Config):
+    """Development configuration."""
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        'DATABASE_URL',
-        'postgresql://postgres:postgres@localhost:5432/app_dev'
+        "DATABASE_URL", 
+        "postgresql://postgres:postgres@localhost:5432/app_dev"
     )
 
 class TestingConfig(Config):
+    """Testing configuration."""
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        'TEST_DATABASE_URL',
-        'postgresql://postgres:postgres@localhost:5432/app_test'
+        "TEST_DATABASE_URL", 
+        "postgresql://postgres:postgres@localhost:5432/app_test"
     )
 
 class ProductionConfig(Config):
+    """Production configuration."""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
+
+config_by_name = {
+    "development": DevelopmentConfig,
+    "testing": TestingConfig,
+    "production": ProductionConfig,
+    "default": DevelopmentConfig
+}
