@@ -1,19 +1,16 @@
 [build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
+requires = ["setuptools>=61.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "backend"
-version = "1.0.0"
-description = "Flask Backend for Monorepo"
+version = "0.1.0"
+description = "Flask Backend Application"
 readme = "README.md"
-authors = [
-    { name = "Developer", email = "developer@example.com" }
-]
 requires-python = ">=3.11"
 dependencies = [
-    "Flask>=3.0.0",
-    "Flask-Cors>=4.0.0"
+    "Flask>=3.1.0",
+    "python-dotenv>=1.0.1"
 ]
 
 [tool.setuptools.packages.find]

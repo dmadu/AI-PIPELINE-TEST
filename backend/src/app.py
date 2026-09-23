@@ -1,6 +1,14 @@
-from src import create_app
+from flask import Flask, jsonify
 
-app = create_app()
+def create_app():
+    app = Flask(__name__)
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    @app.route("/health", methods=["GET"])
+    def health_check():
+        return jsonify({"status": "healthy", "service": "backend"}), 200
+
+    return app
+
+if __name__ == "__main__":
+    app = create_app()
+    app.run(host="0.0.0.0", port=5000, debug=True)
