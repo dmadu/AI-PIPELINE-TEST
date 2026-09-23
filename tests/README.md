@@ -1,3 +1,3 @@
-# Cross-Cutting Tests Directory
+# Tests Directory
 
-This directory is designated for integration, end-to-end (E2E), and cross-cutting test suites across the monorepo.
+This directory contains integration, end-to-end, or cross-cutting test suites.
