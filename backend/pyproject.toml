@@ -1,27 +1,16 @@
 [build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
+requires = ["setuptools>=61.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "backend"
 version = "1.0.0"
-description = "Flask Backend Application"
+description = "Flask Backend Service with Python 3.11"
 readme = "README.md"
-authors = [
-    { name = "Developer", email = "developer@example.com" }
-]
-requires-python = ">=3.11"
+requires-python = "==3.11.*"
 dependencies = [
     "Flask>=3.0.0",
-    "Werkzeug>=3.0.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0.0",
-    "black>=24.2.0",
-    "flake8>=7.0.0",
-    "ruff>=0.2.0"
+    "Werkzeug>=3.0.0"
 ]
 
 [tool.black]
