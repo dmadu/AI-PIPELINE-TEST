@@ -1,3 +1,3 @@
-# Docker Directory
+# Docker
 
-This directory contains containerisation configuration files and Dockerfiles for the project.
+This directory is designated for containerization configurations and Dockerfiles.

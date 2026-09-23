@@ -1,3 +1,3 @@
-# Tests Directory
+# Tests
 
-This directory contains integration, end-to-end (E2E), and system tests across the monorepo.
+This directory is designated for integration, end-to-end, and cross-cutting tests.

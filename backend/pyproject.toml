@@ -4,13 +4,21 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "backend"
-version = "1.0.0"
-description = "Flask backend application"
+version = "0.1.0"
+description = "Flask Backend Application (Python 3.11)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "Flask>=3.0.0",
-    "Werkzeug>=3.0.0"
+    "python-dotenv>=1.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "flake8>=7.0.0",
+    "ruff>=0.2.0"
 ]
 
 [tool.black]
@@ -19,4 +27,4 @@ target-version = ['py311']
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "I"]
+target-version = "py311"
