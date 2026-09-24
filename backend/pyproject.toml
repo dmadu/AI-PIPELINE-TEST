@@ -5,14 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "backend"
 version = "1.0.0"
-description = "Flask Backend for React 19 Application"
-readme = "README.md"
+description = "Flask Backend Application (Python 3.11)"
 requires-python = ">=3.11"
 dependencies = [
     "Flask>=3.1.0",
-    "Flask-Cors>=4.0.0",
-    "psycopg2-binary>=2.9.9",
-    "SQLAlchemy>=2.0.36"
+    "python-dotenv>=1.0.1"
 ]
 
 [tool.ruff]
