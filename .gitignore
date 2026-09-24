@@ -1,9 +1,12 @@
-# Dependencies
-node_modules/
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -15,6 +18,7 @@ lib/
 lib64/
 parts/
 siteroot/
+sysroot/
 var/
 wheels/
 share/python-wheels/
@@ -23,32 +27,41 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
-.env
-.venv
-env/
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.vscode/
+.idea/
+
+# Virtual Environments
 venv/
 ENV/
+env/
 
-# IDEs and Editors
-.idea/
-.vscode/
-*.swp
-*.swo
-.project
-.classpath
-.settings/
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# OS metadata
-.DS_Store
-Thumbs.db
-
-# Build outputs and logs
+# Build outputs
 dist/
 build/
 .next/
-coverage/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-*.log
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
