@@ -1,3 +1,3 @@
 # Docker Directory
 
-This directory contains containerisation and orchestration configurations (e.g., Dockerfiles, docker-compose.yml files).
+This directory contains containerisation assets, Dockerfiles, and compose files for the monorepo.

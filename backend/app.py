@@ -1,13 +1,10 @@
-import os
-from dotenv import load
-from src import create_app
+from flask import Flask
 
-load.load_dotenv() if hasattr(load, 'load_dotenv') else None
+app = Flask(__name__)
 
-from dotenv import load_dotenv
-load_dotenv()
-
-app = create_app()
+@app.route("/")
+def health_check():
+    return {"status": "healthy"}, 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    app.run(host="0.0.0.0", port=5000)
