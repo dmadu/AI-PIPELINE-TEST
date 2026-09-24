@@ -1,3 +1,3 @@
 # Tests Directory
 
-This directory is reserved for integration, e2e, or cross-cutting tests across the monorepo.
+This directory contains integration, end-to-end (E2E), and cross-cutting test suites for the application.

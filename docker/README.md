@@ -1,3 +1,3 @@
 # Docker Directory
 
-This directory is reserved for container orchestration and Dockerfile configurations.
+This directory contains containerization configurations, Dockerfiles, and Docker Compose setups for the project.
