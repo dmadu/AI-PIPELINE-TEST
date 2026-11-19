@@ -1,31 +1,75 @@
-# Python
+# =============================================================================
+# Root .gitignore - Python (backend), Node (frontend), environment files,
+# coverage artefacts and editor/OS noise.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Python / Flask
+# -----------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
 .venv/
 venv/
-.env
-
-# Flask
-instance/
+ENV/
+.env.venv
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+instance/
+*.sqlite
+*.sqlite3
+*.db
 
-# Node
+# -----------------------------------------------------------------------------
+# Node / React / Vite
+# -----------------------------------------------------------------------------
 node_modules/
 dist/
+dist-ssr/
 build/
+.vite/
+.cache/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.eslintcache
 
-# IDE
-.vscode/
-.idea/
+# -----------------------------------------------------------------------------
+# Environment files - keep the committed example, ignore everything else
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
 
-# OS
-.DS_Store
-
-# Test / coverage
+# -----------------------------------------------------------------------------
+# Test / coverage artefacts
+# -----------------------------------------------------------------------------
 .coverage
+.coverage.*
+coverage/
+coverage.xml
 htmlcov/
-.pytest_cache/
+nosetests.xml
+junit.xml
+.tox/
+.nox/
 
-# Logs
-*.log
+# -----------------------------------------------------------------------------
+# Editors / IDEs / OS
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
