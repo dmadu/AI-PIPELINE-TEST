@@ -1,1 +1,1 @@
-"""Request parsing/validation helpers."""
+"""Request validation helpers."""

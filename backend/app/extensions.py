@@ -1,9 +1,4 @@
-"""Shared Flask extension singletons.
-
-Importing the extensions from this module (instead of creating them inside the
-application factory) keeps the import graph flat and avoids circular imports
-between models, blueprints and the factory itself.
-"""
+"""Shared extension singletons (imported everywhere to avoid circular imports)."""
 
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
@@ -16,5 +11,3 @@ migrate = Migrate()
 bcrypt = Bcrypt()
 jwt = JWTManager()
 cors = CORS()
-
-__all__ = ["db", "migrate", "bcrypt", "jwt", "cors"]

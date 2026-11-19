@@ -1,34 +1,45 @@
 """Application factory for the Flask API service."""
 
 import logging
-import sys
 
 from flask import Flask
 
 from .config import get_config
 from .extensions import bcrypt, cors, db, jwt, migrate
-from .utils.errors import register_error_handlers
+from .utils.errors import register_error_handlers, register_jwt_handlers
+
+
+def create_app(config_name=None):
+    """Create and configure a Flask application instance.
+
+    :param config_name: one of 'development', 'production', 'testing'.
+    """
+    app = Flask(__name__)
+    app.config.from_object(get_config(config_name))
+
+    _configure_logging(app)
+    _register_extensions(app)
+    _register_blueprints(app)
+
+    register_error_handlers(app)
+    register_jwt_handlers(app)
+
+    return app
 
 
 def _configure_logging(app):
-    """Attach a stream handler and apply the configured log level."""
-    level_name = str(app.config.get("LOG_LEVEL", "INFO")).upper()
-    level = getattr(logging, level_name, logging.INFO)
-    if app.debug:
-        level = logging.DEBUG
-
+    """Attach a stream handler and pick the log level from the config."""
     if not app.logger.handlers:
-        handler = logging.StreamHandler(sys.stdout)
+        handler = logging.StreamHandler()
         handler.setFormatter(
             logging.Formatter("[%(asctime)s] %(levelname)s in %(module)s: %(message)s")
         )
         app.logger.addHandler(handler)
-
-    app.logger.setLevel(level)
+    app.logger.setLevel(logging.DEBUG if app.config.get("DEBUG") else logging.INFO)
 
 
 def _register_extensions(app):
-    """Initialise the shared extension singletons on the app."""
+    """Initialise the shared extension singletons."""
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
@@ -39,27 +50,14 @@ def _register_extensions(app):
         supports_credentials=False,
     )
 
+    # Imported for side effects so Flask-Migrate/SQLAlchemy see the metadata.
+    from .models import user  # noqa: F401  pylint: disable=unused-import
+
 
 def _register_blueprints(app):
-    """Register every API blueprint."""
+    """Register the API blueprints under the /api/v1 base path."""
     from .api.auth import auth_bp
     from .api.health import health_bp
 
-    app.register_blueprint(health_bp)
-    app.register_blueprint(auth_bp)
-
-
-def create_app(config_name=None):
-    """Build and configure a Flask application instance.
-
-    ``config_name`` accepts an environment name (``development``, ``testing``,
-    ``production``) or a configuration class/object.
-    """
-    app = Flask(__name__)
-    app.config.from_object(get_config(config_name))
-
-    _configure_logging(app)
-    _register_extensions(app)
-
-    # Imported so Flask-Migrate/Alembic can discover the metadata.
-    from .models.user import User  # noqa: F401  pylint: disable=
+    app.register_blueprint(health_bp, url_prefix="/api/v1")
+    app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
