@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Tailwind's preflight stays enabled; MUI's CssBaseline (rendered in main.jsx)
+ * layers its own normalisation on top. Keep global rules here to a minimum so
+ * component styling stays with MUI's theme / Tailwind utility classes.
+ */
+html,
+body,
+#root {
+  height: 100%;
+}
