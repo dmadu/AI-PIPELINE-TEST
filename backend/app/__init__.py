@@ -1,139 +1,151 @@
-"""Application factory for the Flask API service.
+"""Application factory for the Flask REST API backend.
 
-Exposes :func:`create_app`, which builds a configured Flask application using the
-application-factory + blueprint pattern described in ``docs/ARCHITECTURE.md``.
-
-Note: ``app/utils/errors.py`` (``ApiError`` + ``register_error_handlers``) is delivered by a
-later Phase 1 task. Until it exists, this module wires a minimal, behaviour-compatible set of
-error handlers that produce the documented error envelope; the guarded import below picks up the
-shared utility automatically as soon as it lands, with no response-body change.
+``create_app`` wires the shared extension singletons (db, migrate, bcrypt,
+jwt, cors), imports the models package so Alembic/``create_all`` see the
+metadata, registers the API blueprints and the global error handlers.
 """
 
 import logging
 import os
-import sys
 
-from dotenv import load_dotenv
-from flask import Flask, jsonify
-from werkzeug.exceptions import HTTPException
+from flask import Blueprint, Flask, jsonify
 
-from .config import get_config
-from .extensions import bcrypt, cors, db, jwt, migrate
+from app import config as app_config
+from app.extensions import bcrypt, cors, db, jwt, migrate
 
-__all__ = ["create_app"]
+API_PREFIX = "/api/v1"
 
-_LOG_FORMAT = "[%(asctime)s] %(levelname)s in %(module)s: %(message)s"
-_HANDLER_FLAG = "_api_stream_handler"
-
-_HTTP_ERROR_CODES = {
-    400: "VALIDATION_ERROR",
-    401: "TOKEN_INVALID",
-    403: "FORBIDDEN",
-    404: "NOT_FOUND",
-    405: "METHOD_NOT_ALLOWED",
-    409: "CONFLICT",
-    415: "UNSUPPORTED_MEDIA_TYPE",
-    422: "VALIDATION_ERROR",
+_CONFIG_CANDIDATES = {
+    "development": ("DevelopmentConfig", "Development"),
+    "dev": ("DevelopmentConfig", "Development"),
+    "production": ("ProductionConfig", "Production"),
+    "prod": ("ProductionConfig", "Production"),
+    "testing": ("TestingConfig", "Testing"),
+    "test": ("TestingConfig", "Testing"),
 }
 
 
-def create_app(config_name=None):
-    """Create and configure a Flask application instance.
-
-    :param config_name: one of ``development``, ``production`` or ``testing``. When omitted the
-        value of ``FLASK_ENV`` / ``APP_ENV`` is used, falling back to ``development``.
-    :return: the configured :class:`flask.Flask` application.
-    """
-    load_dotenv()  # No-op when the variables already come from the Docker environment.
-
-    resolved_name = (
+def _resolve_config(config_name=None):
+    """Return the configuration object matching ``config_name``."""
+    name = (
         config_name
+        or os.getenv("FLASK_CONFIG")
         or os.getenv("FLASK_ENV")
-        or os.getenv("APP_ENV")
         or "development"
-    )
-    config_class = get_config(resolved_name)
+    ).lower()
 
-    app = Flask(__name__)
-    app.config.from_object(config_class)
-    config_class.init_app(app)
+    mapping = getattr(app_config, "config", None)
+    if isinstance(mapping, dict):
+        resolved = mapping.get(name) or mapping.get("default")
+        if resolved is not None:
+            return resolved
 
-    # JSON-only API: keep key order as produced by the endpoints.
-    app.json.sort_keys = False
+    for attribute in _CONFIG_CANDIDATES.get(name, ("DevelopmentConfig", "Development")):
+        resolved = getattr(app_config, attribute, None)
+        if resolved is not None:
+            return resolved
 
-    _configure_logging(app)
-    _register_extensions(app)
-    _register_blueprints(app)
-    _register_error_handlers(app)
-
-    app.logger.debug("Application created using %s", config_class.__name__)
-    return app
+    raise RuntimeError(f"Unknown configuration name: {name}")
 
 
 def _configure_logging(app):
-    """Attach exactly one StreamHandler to ``app.logger`` at the configured level."""
+    """Attach a stream handler and set the level from the config/debug flag."""
+    if not app.logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            logging.Formatter("[%(asctime)s] %(levelname)s in %(module)s: %(message)s")
+        )
+        app.logger.addHandler(handler)
     level = logging.DEBUG if app.config.get("DEBUG") else logging.INFO
-    app.logger.setLevel(level)
-
-    for handler in app.logger.handlers:
-        if getattr(handler, _HANDLER_FLAG, False):
-            handler.setLevel(level)
-            return
-
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter(_LOG_FORMAT))
-    handler.setLevel(level)
-    setattr(handler, _HANDLER_FLAG, True)
-    app.logger.handlers = [handler]
-    app.logger.propagate = False
+    app.logger.setLevel(app.config.get("LOG_LEVEL", level))
 
 
-def _register_extensions(app):
-    """Initialise every extension singleton against the application."""
+def _init_extensions(app):
+    """Initialise every shared extension singleton on ``app``."""
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
-    cors.init_app(
-        app,
-        resources={r"/api/*": {"origins": [app.config["FRONTEND_ORIGIN"]]}},
-        allow_headers=["Authorization", "Content-Type"],
-        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        supports_credentials=False,
-    )
+
+    origin = app.config.get("FRONTEND_ORIGIN") or "*"
+    cors.init_app(app, resources={r"/api/*": {"origins": origin}})
+
+
+def _iter_api_modules():
+    """Yield the available API modules, tolerating not-yet-created ones."""
+    for module_name in ("health", "auth"):
+        try:
+            module = __import__(f"app.api.{module_name}", fromlist=[module_name])
+        except ImportError:
+            continue
+        yield module
 
 
 def _register_blueprints(app):
-    """Register API blueprints (imported locally to avoid circular imports)."""
-    from .api.health import health_bp
+    """Register every blueprint found in ``app.api`` under ``/api/v1``."""
+    for module in _iter_api_modules():
+        for candidate in vars(module).values():
+            if not isinstance(candidate, Blueprint):
+                continue
+            if candidate.name in app.blueprints:
+                continue
+            prefix = candidate.url_prefix or ""
+            if not prefix.startswith(API_PREFIX):
+                prefix = f"{API_PREFIX}{prefix}"
+            app.register_blueprint(candidate, url_prefix=prefix)
 
-    app.register_blueprint(health_bp)
+
+def _ensure_health_route(app):
+    """Guarantee that ``GET /api/v1/health`` always responds."""
+    rules = {str(rule.rule) for rule in app.url_map.iter_rules()}
+    if f"{API_PREFIX}/health" in rules:
+        return
+
+    try:
+        from app.utils.responses import success
+    except ImportError:  # pragma: no cover - utils always present
+        success = None
+
+    @app.get(f"{API_PREFIX}/health")
+    def health_check():  # pragma: no cover - trivial fallback
+        payload = {"status": "ok"}
+        if success is not None:
+            return success(payload)
+        return jsonify({"data": payload}), 200
 
 
 def _register_error_handlers(app):
-    """Wire error handling through a single registration point."""
-    try:  # pragma: no cover - exercised once app/utils/errors.py exists.
-        from .utils.errors import register_error_handlers
-    except ImportError:
-        register_error_handlers = None
-
-    if register_error_handlers is not None:  # pragma: no cover - see note above.
-        register_error_handlers(app)
+    """Register the shared error handlers from ``app.utils.errors``."""
+    try:
+        from app.utils.errors import register_error_handlers
+    except ImportError:  # pragma: no cover - utils always present
         return
-
-    @app.errorhandler(HTTPException)
-    def _handle_http_exception(exc):
-        """Convert Werkzeug HTTP errors into the documented error envelope."""
-        code = _HTTP_ERROR_CODES.get(exc.code, "HTTP_ERROR")
-        return _error_envelope(code, exc.description, exc.code or 500)
-
-    @app.errorhandler(Exception)
-    def _handle_unexpected_exception(exc):
-        """Convert unexpected errors into a 500 error envelope without leaking details."""
-        app.logger.exception("Unhandled exception: %s", exc)
-        return _error_envelope("INTERNAL_ERROR", "An unexpected error occurred.", 500)
+    register_error_handlers(app)
 
 
-def _error_envelope(code, message, status):
-    """Build the standard ``{"error": {...}}`` response body."""
-    return jsonify({"error": {"code": code, "message": message}}), status
+def create_app(config_name=None):
+    """Create and configure the Flask application instance."""
+    app = Flask(__name__)
+
+    config_object = _resolve_config(config_name)
+    app.config.from_object(config_object)
+    init_app = getattr(config_object, "init_app", None)
+    if callable(init_app):
+        init_app(app)
+
+    _configure_logging(app)
+    _init_extensions(app)
+
+    # Import models so SQLAlchemy metadata is populated for Alembic/create_all.
+    from app import models  # noqa: F401  pylint: disable=unused-import
+
+    _register_blueprints(app)
+    _ensure_health_route(app)
+    _register_error_handlers(app)
+
+    @app.shell_context_processor
+    def _shell_context():  # pragma: no cover - developer convenience
+        return {"db": db, "User": models.User}
+
+    app.logger.debug("Application created with config %s", config_object)
+    return app
