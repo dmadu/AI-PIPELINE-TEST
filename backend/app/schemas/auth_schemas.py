@@ -1,64 +1,70 @@
-"""Parsing and validation helpers for the authentication request payloads.
+"""Request schemas for the authentication endpoints.
 
-Every field rule is delegated to :mod:`app.utils.validators`; this module only
-normalises the raw JSON body (presence, type, whitespace, email casing) and
-collects all failures into a single ``VALIDATION_ERROR`` :class:`ApiError`.
+These helpers parse the raw JSON body, apply the shared validators from
+``app.utils.validators`` and raise a 400 ``VALIDATION_ERROR`` ApiError carrying
+per-field messages. Routes stay thin and never duplicate validation logic.
 """
 
-import inspect
+from ..utils.errors import ApiError
+from ..utils.validators import validate_email_format, validate_password, validate_username
 
-from app.utils.errors import ApiError
-from app.utils.validators import (
-    validate_email_format,
-    validate_password,
-    validate_username,
-)
-
-try:  # pragma: no cover - depends on the validators module layout
-    from app.utils.validators import PASSWORD_RULES
-except ImportError:  # pragma: no cover
-    PASSWORD_RULES = ()
-
-VALIDATION_CODE = "VALIDATION_ERROR"
-VALIDATION_MESSAGE = "Validation failed"
-
-_LABELS = {
-    "email": "Email",
-    "username": "Username",
-    "password": "Password",
-    "identifier": "Username or email",
-}
+VALIDATION_ERROR_CODE = "VALIDATION_ERROR"
+VALIDATION_ERROR_MESSAGE = "Validation failed"
 
 
-def parse_register_payload(data):
-    """Validate a registration body and return ``{email, username, password}``.
+def _as_text(value):
+    """Return a trimmed string for scalar input, otherwise an empty string."""
+    if isinstance(value, str):
+        return value.strip()
+    return ""
 
-    ``email`` is trimmed and lowercased, ``username`` is trimmed with its case
-    preserved and ``password`` is returned untouched. Raises an ``ApiError``
-    with code ``VALIDATION_ERROR`` (HTTP 400) listing every invalid field.
+
+def _join(messages):
+    """Collapse a list of rule messages into a single field message."""
+    return " ".join(messages)
+
+
+def parse_register_request(payload):
+    """Validate a registration body and return cleaned ``email``/``username``/``password``.
+
+    Raises:
+        ApiError: 400 VALIDATION_ERROR when the body shape or any field is invalid.
     """
-    payload = _as_object(data)
+    if not isinstance(payload, dict):
+        raise ApiError(
+            VALIDATION_ERROR_CODE,
+            "Request body must be a JSON object",
+            400,
+        )
+
+    username = _as_text(payload.get("username"))
+    email = _as_text(payload.get("email"))
+    raw_password = payload.get("password")
+
     fields = {}
 
-    email = _string_field(payload, "email", fields)
-    username = _string_field(payload, "username", fields)
-    password = _string_field(payload, "password", fields, strip=False)
+    username_errors = validate_username(username)
+    if username_errors:
+        fields["username"] = _join(username_errors)
 
-    if email is not None:
-        email = email.lower()
-        _collect(fields, "email", _messages(validate_email_format(email)))
-    if username is not None:
-        _collect(fields, "username", _messages(validate_username(username)))
-    if password is not None:
-        password_messages = _password_messages(password)
-        if password_messages:
-            fields["password"] = password_messages
+    email_errors = validate_email_format(email)
+    if email_errors:
+        fields["email"] = _join(email_errors)
+
+    if raw_password is None:
+        fields["password"] = "Password is required"
+    elif not isinstance(raw_password, str):
+        fields["password"] = "Password must be a string"
+    else:
+        password_errors = validate_password(raw_password)
+        if password_errors:
+            fields["password"] = _join(password_errors)
 
     if fields:
-        raise _validation_error(fields)
+        raise ApiError(VALIDATION_ERROR_CODE, VALIDATION_ERROR_MESSAGE, 400, fields)
 
-    return {"email": email, "username": username, "password": password}
-
-
-def parse_login_payload(data):
-    "
+    return {
+        "username": username,
+        "email": email.lower(),
+        "password": raw_password,
+    }

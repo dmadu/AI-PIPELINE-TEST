@@ -1,106 +1,85 @@
-"""Pure input validation helpers shared by the API schemas.
+"""Server-side validation rules shared by the API layer.
 
-The module is deliberately framework free: it imports nothing from Flask or
-from :mod:`app.utils.errors`, so the rules can be unit tested without an
-application context and reused by any layer.
-
-Return shapes (documented once, used everywhere)::
-
-    validate_email_format(email) -> (errors: list[str], normalised: str | None)
-    validate_username(username)  -> (errors: list[str], normalised: str | None)
-    validate_password(password)  -> errors: list[str]
-
-``errors`` is always a list holding one human readable message per failed rule
-and is empty when the value is valid.  ``normalised`` is the cleaned value
-(lowercased email, trimmed username) or ``None`` when validation failed.
+Each validator returns a list of human readable messages; an empty list means
+the value is valid.
 """
 
 import re
 
-from email_validator import EmailNotValidError, validate_email
+MIN_PASSWORD_LENGTH = 8
+MAX_PASSWORD_LENGTH = 128
+MIN_USERNAME_LENGTH = 3
+MAX_USERNAME_LENGTH = 50
+MAX_EMAIL_LENGTH = 255
 
-__all__ = [
-    "PASSWORD_RULES",
-    "PASSWORD_MIN_LENGTH",
-    "PASSWORD_SPECIAL_CHARACTERS",
-    "USERNAME_MIN_LENGTH",
-    "USERNAME_MAX_LENGTH",
-    "EMAIL_MAX_LENGTH",
-    "validate_email_format",
-    "validate_username",
-    "validate_password",
-]
+SPECIAL_CHARACTERS = "!@#$%^&*()-_=+[]{};:,.<>?/|~"
 
-# --- password ---------------------------------------------------------------
-
-PASSWORD_MIN_LENGTH = 8
-PASSWORD_SPECIAL_CHARACTERS = "!@#$%^&*()-_=+[]{};:,.<>?/|~"
-
-# Compiled once at import time and reused by every call.
-_UPPERCASE_PATTERN = re.compile(r"[A-Z]")
-_DIGIT_PATTERN = re.compile(r"[0-9]")
-_SPECIAL_PATTERN = re.compile("[" + re.escape(PASSWORD_SPECIAL_CHARACTERS) + "]")
-
-#: The single source of truth for the password policy.  Each rule exposes a
-#: stable ``name``, the human readable ``message`` returned on failure and the
-#: ``test`` callable evaluating the rule against a string.
 PASSWORD_RULES = (
-    {
-        "name": "min_length",
-        "message": f"Password must be at least {PASSWORD_MIN_LENGTH} characters long.",
-        "test": lambda value: len(value) >= PASSWORD_MIN_LENGTH,
-    },
-    {
-        "name": "uppercase",
-        "message": "Password must contain at least one uppercase letter.",
-        "test": lambda value: bool(_UPPERCASE_PATTERN.search(value)),
-    },
-    {
-        "name": "digit",
-        "message": "Password must contain at least one digit.",
-        "test": lambda value: bool(_DIGIT_PATTERN.search(value)),
-    },
-    {
-        "name": "special",
-        "message": (
-            "Password must contain at least one special character "
-            f"({PASSWORD_SPECIAL_CHARACTERS})."
-        ),
-        "test": lambda value: bool(_SPECIAL_PATTERN.search(value)),
-    },
+    "Password must be at least 8 characters long",
+    "Password must contain at least one uppercase letter",
+    "Password must contain at least one digit",
+    "Password must contain at least one special character "
+    "(!@#$%^&*()-_=+[]{};:,.<>?/|~)",
 )
 
-PASSWORD_REQUIRED_MESSAGE = "Password is required."
+USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+_FALLBACK_EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
 
-# --- username ---------------------------------------------------------------
 
-USERNAME_MIN_LENGTH = 3
-USERNAME_MAX_LENGTH = 50  # matches the String(50) column on users.username
-_USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+def validate_username(username):
+    """Validate a username; returns a list of error messages."""
+    if not isinstance(username, str) or not username.strip():
+        return ["Username is required"]
 
-USERNAME_REQUIRED_MESSAGE = "Username is required."
-USERNAME_LENGTH_MESSAGE = (
-    f"Username must be between {USERNAME_MIN_LENGTH} and {USERNAME_MAX_LENGTH} characters."
-)
-USERNAME_CHARSET_MESSAGE = (
-    "Username may only contain letters, digits, underscores or hyphens."
-)
-
-# --- email ------------------------------------------------------------------
-
-EMAIL_MAX_LENGTH = 255  # matches the String(255) column on users.email
-EMAIL_REQUIRED_MESSAGE = "Email is required."
-EMAIL_TOO_LONG_MESSAGE = f"Email must be at most {EMAIL_MAX_LENGTH} characters."
+    value = username.strip()
+    errors = []
+    if len(value) < MIN_USERNAME_LENGTH:
+        errors.append(f"Username must be at least {MIN_USERNAME_LENGTH} characters long")
+    if len(value) > MAX_USERNAME_LENGTH:
+        errors.append(f"Username must be at most {MAX_USERNAME_LENGTH} characters long")
+    if not USERNAME_PATTERN.match(value):
+        errors.append("Username may only contain letters, numbers, dots, hyphens and underscores")
+    return errors
 
 
 def validate_email_format(email):
-    """Validate an email address and normalise it to lowercase.
+    """Validate an email address; returns a list of error messages."""
+    if not isinstance(email, str) or not email.strip():
+        return ["Email is required"]
 
-    Uses the ``email-validator`` package with deliverability checks disabled so
-    no DNS lookup happens during request handling.
+    value = email.strip()
+    errors = []
+    if len(value) > MAX_EMAIL_LENGTH:
+        errors.append(f"Email must be at most {MAX_EMAIL_LENGTH} characters long")
 
-    :param email: Raw value coming from the request body.
-    :returns: ``(errors, normalised_email)``; ``errors`` is empty and
-        ``normalised_email`` is the lowercased address when the value is valid,
-        otherw"""
-    pass
+    try:
+        from email_validator import EmailNotValidError, validate_email as _validate_email
+
+        try:
+            _validate_email(value, check_deliverability=False)
+        except EmailNotValidError:
+            errors.append("Email format is invalid")
+    except ImportError:  # pragma: no cover - email-validator is a declared dependency
+        if not _FALLBACK_EMAIL_PATTERN.match(value):
+            errors.append("Email format is invalid")
+
+    return errors
+
+
+def validate_password(password):
+    """Validate a raw password; one message per failed rule."""
+    if not isinstance(password, str) or not password:
+        return ["Password is required"]
+
+    errors = []
+    if len(password) < MIN_PASSWORD_LENGTH:
+        errors.append(PASSWORD_RULES[0])
+    if len(password) > MAX_PASSWORD_LENGTH:
+        errors.append(f"Password must be at most {MAX_PASSWORD_LENGTH} characters long")
+    if not any(char.isupper() for char in password):
+        errors.append(PASSWORD_RULES[1])
+    if not any(char.isdigit() for char in password):
+        errors.append(PASSWORD_RULES[2])
+    if not any(char in SPECIAL_CHARACTERS for char in password):
+        errors.append(PASSWORD_RULES[3])
+    return errors
