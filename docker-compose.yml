@@ -1,33 +1,17 @@
-# Docker Compose orchestration for the application stack.
-# `version:` is intentionally omitted (obsolete in Compose v2).
-# No service declares container_name on purpose.
-#
-# Usage:
-#   cp .env.example .env
-#   docker compose up --build
-#   docker compose exec backend flask db upgrade
-
 services:
   db:
     image: postgres:16
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-appuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apppassword}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-appsecret}
       POSTGRES_DB: ${POSTGRES_DB:-appdb}
-    volumes:
-      # Named volume keeps data across `docker compose down` / restarts.
-      - pgdata:/var/lib/postgresql/data
     ports:
-      # Exposed for local psql / GUI clients; safe to remove in production.
-      - "${POSTGRES_PORT:-5435}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      # The backend waits for this check to pass before it starts.
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-appuser} -d ${POSTGRES_DB:-appdb}",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-appuser} -d ${POSTGRES_DB:-appdb}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,21 +20,30 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
     restart: unless-stopped
-    # All configuration/secrets come from the root .env at runtime.
-    env_file:
-      - .env
     environment:
-      # Override DATABASE_URL so the host is always the compose service name.
-      DATABASE_URL: postgresql://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD:-apppassword}@db:5432/${POSTGRES_DB:-appdb}
-      # Lets `docker compose exec backend flask db ...` resolve the app factory.
+      FLASK_CONFIG: ${FLASK_CONFIG:-production}
       FLASK_APP: wsgi.py
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://appuser:appsecret@db:5432/appdb}
+      SECRET_KEY: ${SECRET_KEY:-change-me-secret-key}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-jwt-secret-key}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
     depends_on:
       db:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000/api/v1}
+    restart: unless-stopped
     ports:
-      - "${BACKEND_PORT:-5000}:5000"
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:

@@ -1,0 +1,40 @@
+# Dependencies / build output
+node_modules
+dist
+dist-ssr
+build
+.vite
+
+# Test and coverage output
+coverage
+.nyc_output
+test-results
+vitest.config.*.timestamp-*
+
+# Local environment files (VITE_* values are injected as build args)
+.env
+.env.*
+!.env.example
+
+# Logs / caches
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+.cache
+.eslintcache
+
+# VCS / editors / OS artefacts
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.swp
+.DS_Store
+Thumbs.db
+
+# Container files (not needed inside the build context tree)
+Dockerfile
+.dockerignore
