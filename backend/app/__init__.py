@@ -22,7 +22,7 @@ def create_app(config_name=None):
     _register_blueprints(app)
 
     register_error_handlers(app)
-    register_jwt_handlers(app)
+    register_jwt_handlers(jwt)
 
     return app
 
@@ -61,3 +61,7 @@ def _register_blueprints(app):
 
     app.register_blueprint(health_bp, url_prefix="/api/v1")
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+
+    @app.route("/")
+    def index():
+        return {"message": "Welcome to the API"}

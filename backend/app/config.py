@@ -67,6 +67,9 @@ CONFIG_MAP = {
 
 def get_config(config_name=None):
     """Resolve a configuration class from a name or the environment."""
+    if isinstance(config_name, type):
+        return config_name
+
     name = (
         config_name
         or os.getenv("APP_ENV")

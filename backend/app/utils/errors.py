@@ -53,3 +53,23 @@ def register_error_handlers(app):
     def _handle_unexpected_exception(error):
         current_app.logger.exception("Unhandled exception: %s", error.__class__.__name__)
         return error_response("INTERNAL_ERROR", "An unexpected error occurred", 500)
+
+
+def register_jwt_handlers(jwt):
+    """Register custom response loaders for JWT errors."""
+
+    @jwt.expired_token_loader
+    def _handle_expired_token(jwt_header, jwt_payload):
+        return error_response("TOKEN_EXPIRED", "The token has expired", 401)
+
+    @jwt.invalid_token_loader
+    def _handle_invalid_token(reason):
+        return error_response("TOKEN_INVALID", f"Invalid token: {reason}", 401)
+
+    @jwt.unauthorized_loader
+    def _handle_missing_token(reason):
+        return error_response("TOKEN_MISSING", f"Missing authorization header: {reason}", 401)
+
+    @jwt.revoked_token_loader
+    def _handle_revoked_token(jwt_header, jwt_payload):
+        return error_response("TOKEN_REVOKED", "The token has been revoked", 401)

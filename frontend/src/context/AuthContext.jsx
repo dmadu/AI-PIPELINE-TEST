@@ -16,9 +16,9 @@ import {
   useState,
 } from 'react';
 import {
-  login as loginRequest,
-  me as fetchCurrentUser,
-  register as registerRequest,
+  loginUser as loginRequest,
+  getCurrentUser as fetchCurrentUser,
+  registerUser as registerRequest,
 } from '../api/auth';
 
 /** localStorage key used to persist the access token (see docs/ARCHITECTURE.md). */

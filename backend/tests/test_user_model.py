@@ -68,4 +68,4 @@ def test_to_dict_exposes_only_public_fields(model_app):
 
     assert set(payload.keys()) == {"id", "username", "email", "created_at"}
     assert "password_hash" not in payload
-    assert "updated_at" not
+    assert "updated_at" not in payload
