@@ -9,34 +9,26 @@ from .config import get_config
 from .extensions import bcrypt, cors, db, jwt, migrate
 from .utils.errors import register_error_handlers
 
-try:  # pragma: no cover - optional dependency for local (non-Docker) runs
-    from dotenv import load_dotenv
-
-    load_dotenv()
-except ImportError:  # pragma: no cover
-    pass
-
 
 def _configure_logging(app):
-    """Attach a single StreamHandler and honour the configured log level."""
-    level = getattr(logging, str(app.config.get("LOG_LEVEL", "INFO")).upper(), logging.INFO)
+    """Attach a stream handler and apply the configured log level."""
+    level_name = str(app.config.get("LOG_LEVEL", "INFO")).upper()
+    level = getattr(logging, level_name, logging.INFO)
+    if app.debug:
+        level = logging.DEBUG
+
     if not app.logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(
-            logging.Formatter("[%(asctime)s] %(levelname)s in %(name)s: %(message)s")
+            logging.Formatter("[%(asctime)s] %(levelname)s in %(module)s: %(message)s")
         )
         app.logger.addHandler(handler)
+
     app.logger.setLevel(level)
-    app.logger.propagate = False
 
 
-def create_app(config_name=None):
-    """Create and configure a Flask application instance."""
-    app = Flask(__name__)
-    app.config.from_object(get_config(config_name))
-
-    _configure_logging(app)
-
+def _register_extensions(app):
+    """Initialise the shared extension singletons on the app."""
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
@@ -47,15 +39,27 @@ def create_app(config_name=None):
         supports_credentials=False,
     )
 
-    # Imported so Flask-Migrate/metadata sees the model.
-    from .models.user import User  # noqa: F401  pylint: disable=unused-import
 
+def _register_blueprints(app):
+    """Register every API blueprint."""
     from .api.auth import auth_bp
     from .api.health import health_bp
 
-    app.register_blueprint(auth_bp)
     app.register_blueprint(health_bp)
+    app.register_blueprint(auth_bp)
 
-    register_error_handlers(app)
 
-    return app
+def create_app(config_name=None):
+    """Build and configure a Flask application instance.
+
+    ``config_name`` accepts an environment name (``development``, ``testing``,
+    ``production``) or a configuration class/object.
+    """
+    app = Flask(__name__)
+    app.config.from_object(get_config(config_name))
+
+    _configure_logging(app)
+    _register_extensions(app)
+
+    # Imported so Flask-Migrate/Alembic can discover the metadata.
+    from .models.user import User  # noqa: F401  pylint: disable=
