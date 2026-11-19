@@ -1,18 +1,36 @@
+"""Pydantic models for the task API."""
+
+from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
-class ItemCreate(BaseModel):
-    """Payload accepted when creating or replacing an item."""
-
-    name: str = Field(min_length=1, max_length=120)
-    description: Optional[str] = Field(default=None, max_length=1000)
-    price: float = Field(ge=0)
-    in_stock: bool = True
+class Status(str, Enum):
+    todo = "todo"
+    doing = "doing"
+    done = "done"
 
 
-class Item(ItemCreate):
-    """Stored item, including its generated identifier."""
+class TaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=2000)
+    status: Status = Status.todo
 
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    status: Optional[Status] = None
+
+
+class Task(TaskCreate):
     id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+def now() -> datetime:
+    """Current UTC time."""
+    return datetime.now(timezone.utc)

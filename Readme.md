@@ -1,38 +1,56 @@
-# Items API
+# Task API
 
-A small FastAPI service with in-memory CRUD for items.
+A small REST API for managing tasks, built with FastAPI and Pydantic v2.
+Data is kept in a thread-safe in-memory store, so it resets on restart.
+
+## Layout
+
+- `src/models.py` - request and response models.
+- `src/storage.py` - in-memory store and `NotFound` error.
+- `src/app.py` - routes and HTTP error mapping.
+- `tests/test_app.py` - API tests.
 
 ## Install
 
 ```
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ## Run
 
 ```
-uvicorn src.main:app --reload
+uvicorn src.app:app --reload
 ```
 
-Docs are served at `/docs`.
+Interactive docs are served at `/docs`.
 
-## Test
+## Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/health` | Liveness check |
+| POST | `/tasks` | Create a task (201) |
+| GET | `/tasks` | List tasks, optional `status` filter |
+| GET | `/tasks/{id}` | Fetch one task |
+| PATCH | `/tasks/{id}` | Partial update |
+| DELETE | `/tasks/{id}` | Delete a task (204) |
+
+## Behaviour notes
+
+- `status` must be `todo`, `doing` or `done`.
+- Titles are required and limited to 200 characters.
+- PATCH only applies fields that are sent; `updated_at` always changes.
+- Unknown ids return 404; invalid bodies return 422.
+- Ids are sequential integers starting at 1.
+
+## Tests
 
 ```
 pytest
 ```
 
-## Endpoints
+## Possible next steps
 
-- `GET /health` - liveness check.
-- `GET /items` - list items.
-- `POST /items` - create an item.
-- `GET /items/{item_id}` - fetch one item.
-- `PUT /items/{item_id}` - replace an item.
-- `DELETE /items/{item_id}` - remove an item.
-
-## Notes
-
-- Storage is a process-local dict, so data resets on restart.
-- Validation is handled by Pydantic models.
-- Missing resources return HTTP 404 with a JSON detail message.
+Swap the store for a database, add pagination, and add authentication.
