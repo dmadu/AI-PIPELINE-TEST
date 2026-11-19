@@ -1,170 +1,209 @@
-# Project
+# Full-Stack Authentication Application
 
-Full-stack application: a **Flask 3 REST API** (Python 3.11, SQLAlchemy, Flask-Migrate,
-Flask-JWT-Extended, Flask-Bcrypt) backed by **PostgreSQL 16**, with a React 19 frontend
-(added in a later phase). Everything is orchestrated with Docker Compose.
+A responsive **React 19 + Vite** single-page frontend (Material UI + Tailwind CSS, React
+Router DOM) talking to a **Flask 3** REST API (SQLAlchemy, Flask-Migrate, Flask-Bcrypt,
+Flask-JWT-Extended) backed by **PostgreSQL 16**. Every service runs in its own container
+and the whole stack is orchestrated with Docker Compose.
 
-## Project structure
+---
+
+## Project Structure
 
 ```text
 project/
-  backend/            # Flask service root
-    app/              # application package (create_app, config, extensions)
-      api/            # blueprints: health.py, auth.py
-      models/         # SQLAlchemy models (user.py)
-      schemas/        # request validation helpers
-      utils/          # errors.py, responses.py, validators.py
-    migrations/       # Flask-Migrate / Alembic revisions
-    tests/            # pytest suite
+  backend/              # Flask API service
+    app/                # application package (factory, api, models, utils)
+    migrations/         # Flask-Migrate (Alembic) revisions
+    tests/              # pytest suite
     Dockerfile
     requirements.txt
     wsgi.py
-    .env.example
-  frontend/           # React 19 service root (later phase)
-  docs/
+  frontend/             # React 19 + Vite SPA
+    src/                # pages, components, context, api client, utils, tests
+    Dockerfile          # multi-stage: node build -> nginx:alpine runtime
+    nginx.conf          # static serving + SPA history fallback
+    vite.config.js
+  docs/                 # architecture documentation
   docker-compose.yml
   .env.example
   Readme.md
 ```
 
-## API
+---
 
-- Base path: `/api/v1`
-- Health check: `GET /api/v1/health`
-- Auth: `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`
-- Success envelope: `{"data": { ... }}`
-- Error envelope: `{"error": {"code": "...", "message": "...", "fields": { ... }}}`
+## Prerequisites
 
-## Configuration
+| Tool | Version |
+|------|---------|
+| Docker Engine | 24+ |
+| Docker Compose | v2 (`docker compose`) |
+| Node.js (only for local Vite dev) | 20 LTS |
+| Python (only for local backend dev) | 3.11 |
 
-All configuration is read from environment variables (see `backend/app/config.py`).
-No secrets are committed or baked into the Docker image.
-
-| Variable           | Description                                                |
-| ------------------ | ---------------------------------------------------------- |
-| `FLASK_APP`        | CLI entrypoint, `wsgi.py`                                   |
-| `FLASK_ENV`        | `development` \| `production` \| `testing`                  |
-| `CONFIG_NAME`      | Configuration class selector (same values as `FLASK_ENV`)   |
-| `SECRET_KEY`       | Flask signing secret                                        |
-| `JWT_SECRET_KEY`   | JWT signing secret                                          |
-| `DATABASE_URL`     | SQLAlchemy URL, e.g. `postgresql://appuser:apppassword@db:5432/appdb` |
-| `FRONTEND_ORIGIN`  | Allowed CORS origin, e.g. `http://localhost:3000`           |
-| `POSTGRES_USER`    | Postgres role created by the `db` service                   |
-| `POSTGRES_PASSWORD`| Postgres password                                           |
-| `POSTGRES_DB`      | Postgres database name                                      |
-
-> Inside Docker Compose the database host is the **service name `db`**, not `localhost`.
+Ports **3000** (frontend), **5000** (backend API) and **5432** (PostgreSQL) must be free,
+or overridden in `.env`.
 
 ---
 
-## Running with Docker Compose
+## 1. Environment setup
 
-Prerequisites: Docker Engine with the Compose v2 plugin.
-
-1. Create your local environment file from the template and edit the secrets:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Build the images and start the stack (PostgreSQL 16 + Flask API on gunicorn):
-
-   ```bash
-   docker compose up --build
-   ```
-
-   The `backend` service waits until the `db` service reports **healthy**
-   (`pg_isready`) before it starts.
-
-3. Apply the database migrations (see the next section) and verify the API:
-
-   ```bash
-   curl http://localhost:5000/api/v1/health
-   # {"data":{"status":"ok", ...}}
-   ```
-
-Useful commands:
+Copy the sample environment file at the repository root and adjust the values
+(secrets, ports, credentials):
 
 ```bash
-docker compose config            # validate / render the merged configuration
-docker compose ps                # service status and health
-docker compose logs -f backend   # follow gunicorn logs
-docker compose down              # stop the stack (pgdata volume is preserved)
-docker compose down -v           # stop and DELETE the database volume
+cp .env.example .env
 ```
 
-Data is stored in the named volume **`pgdata`**, so restarting the stack keeps
-all rows. No service declares a `container_name`.
+Key variables:
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | database credentials | `appuser` / `appsecret` / `appdb` |
+| `DATABASE_URL` | SQLAlchemy URL used by the backend container | `postgresql+psycopg2://appuser:appsecret@db:5432/appdb` |
+| `SECRET_KEY`, `JWT_SECRET_KEY` | Flask / JWT secrets - **change for anything but local dev** | `change-me-*` |
+| `FRONTEND_ORIGIN` | CORS origin accepted by the API | `http://localhost:3000` |
+| `VITE_API_BASE_URL` | API base URL baked into the SPA at **build** time | `http://localhost:5000/api/v1` |
+| `FRONTEND_PORT` / `BACKEND_PORT` | published host ports | `3000` / `5000` |
+
+> `FRONTEND_ORIGIN` must match the URL the browser uses to load the SPA, otherwise the
+> browser blocks API calls with a CORS error.
+
+The frontend also ships `frontend/.env.example` for local (non-Docker) development:
+
+```bash
+cp frontend/.env.example frontend/.env
+```
+
+In the container build the value is **not** read from that file - it is passed as the
+`VITE_API_BASE_URL` build argument by Compose, because Vite inlines `VITE_*` variables at
+build time.
 
 ---
 
-## Database migrations
+## 2. Run the full stack with Docker Compose
 
-Migrations are Flask-Migrate (Alembic) revisions located in `backend/migrations/`
-and are executed **inside the running backend container**, where `DATABASE_URL`
-points at the `db` service. `FLASK_APP=wsgi.py` is already set in the image and in
-`docker-compose.yml`, so the `flask` CLI resolves the application factory
-automatically.
+From the repository root:
 
-Apply all pending migrations (creates the `users` table from
-`0001_create_users_table`):
+```bash
+docker compose up --build
+```
+
+This builds and starts three services:
+
+| Service | Description | URL / Port |
+|---------|-------------|------------|
+| `db` | PostgreSQL 16 with the named volume `pgdata` and a healthcheck | `localhost:5432` |
+| `backend` | Flask API served by gunicorn | <http://localhost:5000> |
+| `frontend` | Production Vite build served by nginx | <http://localhost:3000> |
+
+Useful endpoints:
+
+- SPA: <http://localhost:3000> (deep links such as `/about` and `/contact` reload correctly)
+- Health check: <http://localhost:5000/api/v1/health>
+- Auth API: `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`
+
+Run detached and follow logs:
+
+```bash
+docker compose up --build -d
+docker compose logs -f backend frontend
+```
+
+### Database migrations
+
+If the schema is not created automatically on start-up, apply the Alembic migrations
+inside the running backend container:
 
 ```bash
 docker compose exec backend flask db upgrade
 ```
 
-Generate a new revision after changing a model:
+To create a new revision after changing the models:
 
 ```bash
-docker compose exec backend flask db migrate -m "add some column"
+docker compose exec backend flask db migrate -m "describe change"
 docker compose exec backend flask db upgrade
 ```
 
-Other handy migration commands:
+### Stopping / cleaning up
 
 ```bash
-docker compose exec backend flask db current     # current revision
-docker compose exec backend flask db history     # revision history
-docker compose exec backend flask db downgrade -1
+docker compose down            # stop and remove containers and the network
+docker compose down -v         # also remove the pgdata volume (deletes all data)
+docker compose build --no-cache frontend   # force a clean frontend rebuild
 ```
 
-> If `FLASK_APP` is ever unset in your shell, prefix the command:
-> `docker compose exec -e FLASK_APP=wsgi.py backend flask db upgrade`.
-
-Verify the schema directly in the database container:
-
-```bash
-docker compose exec db psql -U appuser -d appdb -c "\dt"
-docker compose exec db psql -U appuser -d appdb -c "\d users"
-```
+> Because `VITE_API_BASE_URL` is compiled into the bundle, changing it requires
+> rebuilding the frontend image (`docker compose up --build`).
 
 ---
 
-## Local development without Docker (optional)
+## 3. Local development without Docker
+
+### Frontend (Vite dev server with HMR)
+
+```bash
+cd frontend
+cp .env.example .env          # VITE_API_BASE_URL=http://localhost:5000/api/v1
+npm install
+npm run dev                   # http://localhost:5173
+```
+
+Other frontend scripts:
+
+```bash
+npm run build                 # production build into frontend/dist (what the image ships)
+npm run preview               # serve the built dist locally
+npm run test                  # Vitest + React Testing Library
+```
+
+When using the Vite dev server, set `FRONTEND_ORIGIN=http://localhost:5173` for the
+backend so CORS allows the dev origin.
+
+### Backend
 
 ```bash
 cd backend
-python3.11 -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # set DATABASE_URL to a reachable Postgres host
-export FLASK_APP=wsgi.py
+cp .env.example .env          # DATABASE_URL, SECRET_KEY, JWT_SECRET_KEY, FRONTEND_ORIGIN
 flask db upgrade
 flask run --port 5000
+pytest                        # backend test suite
 ```
 
-## Tests
-
-The backend test suite uses the `TestingConfig` (SQLite in-memory), so no
-PostgreSQL instance is required.
+You can also run only the database in Docker while developing the API locally:
 
 ```bash
-# locally
-cd backend && pytest
-
-# inside the container
-docker compose exec backend pytest
+docker compose up -d db
 ```
 
-> Note: `tests/` is excluded from the runtime image via `backend/.dockerignore`;
-> run them locally, or mount the backend directory when you want to run pytest
-> inside the container.
+---
+
+## 4. Containerisation notes
+
+- `frontend/Dockerfile` is a multi-stage build: `node:20-alpine` installs dependencies
+  (`npm ci` when `package-lock.json` exists) and runs `npm run build`; `nginx:alpine`
+  then serves only the `dist/` output from `/usr/share/nginx/html` on port **80**.
+- `frontend/nginx.conf` defines a single server block with
+  `try_files $uri $uri/ /index.html` so client-side routes (`/about`, `/contact`,
+  unknown paths -> NotFound page) work on direct load/refresh. Hashed assets under
+  `/assets/` get long-lived immutable cache headers while `index.html` is never cached.
+- `frontend/.dockerignore` keeps `node_modules`, `dist`, test output, local env files and
+  VCS artefacts out of the build context.
+- Nothing is mounted into the frontend container at runtime - the image is a
+  self-contained static bundle.
+- No `container_name` keys are used in `docker-compose.yml`; verify with
+  `docker compose config`.
+
+---
+
+## 5. Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| CORS error in the browser console | Ensure `FRONTEND_ORIGIN` matches the URL in the address bar (`http://localhost:3000`) and restart the backend. |
+| SPA loads but API calls go to the wrong host | Rebuild the frontend image after changing `VITE_API_BASE_URL` (`docker compose up --build frontend`). |
+| `404` from nginx on refresh | Confirm `frontend/nginx.conf` was copied to `/etc/nginx/conf.d/default.conf` (rebuild without cache). |
+| Backend cannot connect to the database | Wait for the `db` healthcheck; check `DATABASE_URL` host is `db` (the compose service name). |
+| Port already in use | Change `FRONTEND_PORT`, `BACKEND_PORT` or `POSTGRES_PORT` in `.env`. |
