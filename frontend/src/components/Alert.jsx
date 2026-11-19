@@ -1,52 +1,63 @@
-import { Alert as MuiAlert, AlertTitle } from '@mui/material';
+import { Alert as MuiAlert, AlertTitle, Box } from '@mui/material';
 
 /**
- * Reusable presentational wrapper around MUI's Alert used to render the API
- * error envelope ({ code, message, fields }) consistently across forms.
- *
- * Renders nothing when there is neither a message nor any field error.
- *
- * @param {object} props
- * @param {string} [props.message] main (human readable) API message
- * @param {Object<string, string|string[]>} [props.fields] field -> message map
- * @param {'error'|'warning'|'info'|'success'} [props.severity='error']
- * @param {string} [props.title] optional alert title
- * @param {Function} [props.onClose] when supplied, a close button is rendered
- * @param {string} [props.className] extra Tailwind classes
+ * Accepts either a plain message, a string error, or the normalised API error
+ * envelope ({ code, message, fields }) - or the raw { error: {...} } payload.
  */
+const resolveError = (error) => {
+  if (!error) {
+    return {};
+  }
+  if (typeof error === 'string') {
+    return { message: error };
+  }
+  if (error.error && typeof error.error === 'object') {
+    return error.error;
+  }
+  return error;
+};
+
 function Alert({
+  error = null,
   message = '',
   fields = null,
   severity = 'error',
   title = '',
-  onClose = undefined,
+  onClose = null,
   className = '',
+  children = null,
 }) {
-  const fieldEntries = fields
-    ? Object.entries(fields).filter(([, value]) => Boolean(value))
-    : [];
+  const resolved = resolveError(error);
+  const text = message || resolved.message || '';
+  const fieldErrors = fields || resolved.fields || null;
 
-  if (!message && fieldEntries.length === 0) {
+  const entries =
+    fieldErrors && typeof fieldErrors === 'object'
+      ? Object.entries(fieldErrors).filter(([, value]) => Boolean(value))
+      : [];
+
+  if (!text && entries.length === 0 && !children) {
     return null;
   }
 
   return (
     <MuiAlert
       severity={severity}
-      onClose={onClose}
-      className={`w-full my-2 ${className}`.trim()}
+      onClose={onClose || undefined}
+      className={`w-full ${className}`.trim()}
     >
       {title ? <AlertTitle>{title}</AlertTitle> : null}
-      {message ? <span className="block">{message}</span> : null}
-      {fieldEntries.length > 0 ? (
-        <ul className="mt-1 mb-0 pl-5 list-disc">
-          {fieldEntries.map(([field, value]) => (
-            <li key={field} className="text-sm">
-              <strong>{field}</strong>: {Array.isArray(value) ? value.join(', ') : value}
-            </li>
+      {text}
+      {entries.length > 0 ? (
+        <Box component="ul" className="mt-1 list-disc pl-5">
+          {entries.map(([field, value]) => (
+            <Box component="li" key={field}>
+              {Array.isArray(value) ? value.join(' ') : value}
+            </Box>
           ))}
-        </ul>
+        </Box>
       ) : null}
+      {children}
     </MuiAlert>
   );
 }

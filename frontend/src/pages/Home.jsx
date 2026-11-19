@@ -1,118 +1,57 @@
-import { Box, Button, Container, Divider, Paper, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import { Box, Button, Container, Paper, Stack, Typography } from '@mui/material';
+import LoginForm from '../components/LoginForm';
 
-const highlights = [
-  {
-    title: 'Secure registration',
-    description:
-      'Accounts are validated on the server and passwords are stored as bcrypt hashes - never in plain text.',
-  },
-  {
-    title: 'Token based sign in',
-    description:
-      'Signing in issues a short lived JSON Web Token that protects every private area of the application.',
-  },
-  {
-    title: 'Responsive by default',
-    description:
-      'The interface adapts from small phones to wide desktops, so you can work comfortably on any device.',
-  },
-];
-
-export default function Home() {
+function Home() {
   return (
-    <Container
-      maxWidth="lg"
-      component="main"
-      data-testid="home-page"
-      className="w-full max-w-full px-4 py-8 sm:py-12"
-    >
-      {/* Hero / introduction */}
-      <Box
-        component="section"
-        data-testid="home-hero"
-        className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12"
-      >
-        <Stack spacing={2} className="w-full lg:w-7/12">
-          <Typography variant="overline" color="primary" className="tracking-widest">
-            Secure user authentication
+    <Container maxWidth="lg" className="py-8">
+      <Box className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-start">
+        <Box className="flex flex-col justify-center">
+          <Typography variant="h3" component="h1" className="!font-bold">
+            Welcome
           </Typography>
-
-          <Typography variant="h3" component="h1" className="break-words" sx={{ fontWeight: 700 }}>
-            Welcome to SecureAuth
-          </Typography>
-
-          <Typography variant="body1" color="text.secondary" className="max-w-prose">
-            SecureAuth is a small, focused demonstration of a complete registration and login
-            workflow: a React single page application talking to a Flask REST API backed by
-            PostgreSQL. Create an account, sign in and reach your personal dashboard - with every
-            rule enforced on the server.
+          <Typography variant="body1" className="!mt-4 text-gray-700">
+            This is the public home page. Sign in with your username or email address to reach
+            your dashboard, or create a new account in a few seconds.
           </Typography>
 
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             spacing={2}
-            className="pt-2"
-            alignItems={{ xs: 'stretch', sm: 'center' }}
+            className="!mt-6 w-full sm:w-auto"
           >
-            <Button component={RouterLink} to="/about" variant="contained" size="large">
-              Learn more about us
+            <Button
+              component={RouterLink}
+              to="/register"
+              variant="contained"
+              color="secondary"
+              size="large"
+              className="!normal-case"
+            >
+              Create an account
             </Button>
-            <Button component={RouterLink} to="/contact" variant="outlined" size="large">
-              Contact us
+            <Button
+              component={RouterLink}
+              to="/about"
+              variant="outlined"
+              size="large"
+              className="!normal-case"
+            >
+              Learn more
             </Button>
           </Stack>
-        </Stack>
 
-        {/* ----------------------------------------------------------------- */}
-        {/* Auth slot: LoginForm + Register link - Phase 4                      */}
-        {/* Replace the contents of this Paper with <LoginForm /> and the       */}
-        {/* registration link. No form or auth logic lives here yet.            */}
-        {/* ----------------------------------------------------------------- */}
-        <Paper
-          variant="outlined"
-          data-testid="home-auth-slot"
-          aria-label="Sign in area placeholder"
-          className="w-full p-6 lg:w-5/12"
-          sx={{ borderStyle: 'dashed', borderWidth: 2 }}
-        >
-          <Stack spacing={1.5}>
-            <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
-              Sign in
-            </Typography>
-            <Divider />
-            <Typography variant="body2" color="text.secondary">
-              This area is reserved for the login form and the link used to create a new account.
-              Both arrive in the next development phase.
-            </Typography>
-            <Typography variant="caption" color="text.disabled">
-              Placeholder only - no form fields or authentication logic are implemented yet.
-            </Typography>
-          </Stack>
+          <Typography variant="body2" className="!mt-4 text-gray-600">
+            New here? Use the registration link above to sign up.
+          </Typography>
+        </Box>
+
+        <Paper elevation={3} className="w-full p-6 md:p-8">
+          <LoginForm />
         </Paper>
-      </Box>
-
-      <Divider className="!my-10" />
-
-      {/* Highlights */}
-      <Box component="section" data-testid="home-highlights">
-        <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }} className="mb-4">
-          What you get
-        </Typography>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {highlights.map((item) => (
-            <Paper key={item.title} elevation={1} className="h-full p-5">
-              <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600 }}>
-                {item.title}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" className="mt-2">
-                {item.description}
-              </Typography>
-            </Paper>
-          ))}
-        </div>
       </Box>
     </Container>
   );
 }
+
+export default Home;
