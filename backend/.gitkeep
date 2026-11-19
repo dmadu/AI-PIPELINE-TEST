@@ -1,0 +1,5 @@
+Placeholder - keeps the backend/ directory tracked by git.
+
+The Flask API service (app/ package, requirements.txt, wsgi.py, Dockerfile,
+pytest.ini, migrations/ and tests/) is delivered by later Phase 1 tasks.
+See ../docs/architecture.md for the target layout.

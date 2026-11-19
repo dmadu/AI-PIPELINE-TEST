@@ -1,0 +1,5 @@
+Placeholder - keeps the frontend/ directory tracked by git.
+
+The React 19 SPA (src/, index.html, package.json, vite.config.js,
+tailwind.config.js, nginx.conf and Dockerfile) is delivered by later tasks.
+See ../docs/architecture.md for the target layout.

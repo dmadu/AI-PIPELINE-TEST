@@ -1,0 +1,56 @@
+# Docker Compose orchestration for the application stack.
+# `version:` is intentionally omitted (obsolete in Compose v2).
+# No service declares container_name on purpose.
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build
+#   docker compose exec backend flask db upgrade
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-appuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apppassword}
+      POSTGRES_DB: ${POSTGRES_DB:-appdb}
+    volumes:
+      # Named volume keeps data across `docker compose down` / restarts.
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # Exposed for local psql / GUI clients; safe to remove in production.
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      # The backend waits for this check to pass before it starts.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-appuser} -d ${POSTGRES_DB:-appdb}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # All configuration/secrets come from the root .env at runtime.
+    env_file:
+      - .env
+    environment:
+      # Override DATABASE_URL so the host is always the compose service name.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD:-apppassword}@db:5432/${POSTGRES_DB:-appdb}
+      # Lets `docker compose exec backend flask db ...` resolve the app factory.
+      FLASK_APP: wsgi.py
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+
+volumes:
+  pgdata:
