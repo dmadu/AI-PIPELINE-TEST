@@ -20,7 +20,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       # Exposed for local psql / GUI clients; safe to remove in production.
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5435}:5432"
     healthcheck:
       # The backend waits for this check to pass before it starts.
       test:

@@ -102,4 +102,5 @@ def validate_email_format(email):
     :param email: Raw value coming from the request body.
     :returns: ``(errors, normalised_email)``; ``errors`` is empty and
         ``normalised_email`` is the lowercased address when the value is valid,
-        otherw
+        otherw"""
+    pass
