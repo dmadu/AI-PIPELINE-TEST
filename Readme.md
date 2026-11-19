@@ -1,56 +1,64 @@
-# Task API
+# Project
 
-A small REST API for managing tasks, built with FastAPI and Pydantic v2.
-Data is kept in a thread-safe in-memory store, so it resets on restart.
+A small service with a REST API, background jobs, and a web client.
 
-## Layout
+## Overview
 
-- `src/models.py` - request and response models.
-- `src/storage.py` - in-memory store and `NotFound` error.
-- `src/app.py` - routes and HTTP error mapping.
-- `tests/test_app.py` - API tests.
+The system has three parts. The API handles HTTP requests. The worker runs queued jobs. The client renders the user interface.
 
-## Install
+All parts share one database and one message queue. Each part can be deployed on its own.
 
-```
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+## Requirements
 
-## Run
+- Runtime: Node.js 20 or newer.
+- Database: PostgreSQL 15 or newer.
+- Queue: Redis 7 or newer.
+- Package manager: npm.
 
-```
-uvicorn src.app:app --reload
-```
+## Setup
 
-Interactive docs are served at `/docs`.
+1. Clone the repository.
+2. Copy `.env.example` to `.env`.
+3. Fill in the database and Redis URLs.
+4. Install dependencies with npm.
+5. Run database migrations.
+6. Start the API, the worker, and the client.
 
-## Endpoints
+## Configuration
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/health` | Liveness check |
-| POST | `/tasks` | Create a task (201) |
-| GET | `/tasks` | List tasks, optional `status` filter |
-| GET | `/tasks/{id}` | Fetch one task |
-| PATCH | `/tasks/{id}` | Partial update |
-| DELETE | `/tasks/{id}` | Delete a task (204) |
+Configuration comes from environment variables. The application reads them once at startup. Missing required values stop the process with a clear error.
 
-## Behaviour notes
+Key variables:
 
-- `status` must be `todo`, `doing` or `done`.
-- Titles are required and limited to 200 characters.
-- PATCH only applies fields that are sent; `updated_at` always changes.
-- Unknown ids return 404; invalid bodies return 422.
-- Ids are sequential integers starting at 1.
+- `DATABASE_URL` — PostgreSQL connection string.
+- `REDIS_URL` — Redis connection string.
+- `PORT` — API listen port.
+- `LOG_LEVEL` — one of debug, info, warn, error.
+- `JWT_SECRET` — signing key for access tokens.
 
-## Tests
+## Scripts
 
-```
-pytest
-```
+- `dev` — run all services with hot reload.
+- `build` — compile TypeScript to JavaScript.
+- `start` — run the compiled API.
+- `test` — run unit and integration tests.
+- `lint` — check formatting and lint rules.
+- `migrate` — apply pending migrations.
 
-## Possible next steps
+## Project layout
 
-Swap the store for a database, add pagination, and add authentication.
+- `src/api` — HTTP routes and controllers.
+- `src/services` — business logic.
+- `src/db` — schema, migrations, and queries.
+- `src/worker` — job handlers.
+- `src/shared` — config, logging, and errors.
+- `tests` — test suites.
+- `docs` — written documentation.
+
+## Documentation
+
+See `docs/architecture.md` for the system design. See `docs/api.md` for endpoint details. See `docs/operations.md` for deployment and monitoring. See `CONTRIBUTING.md` for the development workflow.
+
+## License
+
+MIT.
