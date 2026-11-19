@@ -1,35 +1,38 @@
-# Task API
+# Items API
 
-A small REST API for managing tasks, built with FastAPI.
+A small FastAPI service with in-memory CRUD for items.
 
-## Features
+## Install
 
-- Create, read, update and delete tasks.
-- Filter the task list by completion state.
-- In-memory, thread-safe storage.
-- Automatic OpenAPI docs at `/docs`.
+```
+pip install -r requirements.txt
+```
 
-## Setup
+## Run
 
-1. Create a virtual environment.
-2. Install dependencies: `pip install -r requirements.txt`.
-3. Run the server: `uvicorn app.main:app --reload`.
+```
+uvicorn src.main:app --reload
+```
+
+Docs are served at `/docs`.
+
+## Test
+
+```
+pytest
+```
 
 ## Endpoints
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | /health | Service liveness check |
-| GET | /tasks | List tasks, optional `completed` filter |
-| POST | /tasks | Create a task |
-| GET | /tasks/{id} | Fetch one task |
-| PATCH | /tasks/{id} | Partially update a task |
-| DELETE | /tasks/{id} | Delete a task |
-
-## Tests
-
-Run `pytest` from the project root.
+- `GET /health` - liveness check.
+- `GET /items` - list items.
+- `POST /items` - create an item.
+- `GET /items/{item_id}` - fetch one item.
+- `PUT /items/{item_id}` - replace an item.
+- `DELETE /items/{item_id}` - remove an item.
 
 ## Notes
 
-Data lives in process memory and is lost on restart. Swap the storage module for a database layer to persist data.
+- Storage is a process-local dict, so data resets on restart.
+- Validation is handled by Pydantic models.
+- Missing resources return HTTP 404 with a JSON detail message.
