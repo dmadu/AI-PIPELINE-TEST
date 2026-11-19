@@ -1,0 +1,38 @@
+# Python bytecode / caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Local secrets / local databases
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.db
+
+# Tests are not needed in the runtime image
+tests/
+
+# Editor / OS noise
+.idea/
+.vscode/
+.DS_Store
+*.log
+
+# NOTE: backend/migrations/ is intentionally NOT ignored - Flask-Migrate
+# revisions are executed from inside the container.
